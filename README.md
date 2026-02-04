@@ -43,7 +43,7 @@ Powered by **Framer Motion** and **Tailwind CSS**, the dashboard features:
 ---
 
 ## 📸 Screenshots
-*(Add your screenshots here later)*
+*(will add later)*
 
 | Safe Mode (Blue) | Critical Mode (Red) |
 | :---: | :---: |
