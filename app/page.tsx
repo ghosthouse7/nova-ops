@@ -1,65 +1,125 @@
-import Image from "next/image";
+"use client"; 
+
+import { useState } from "react";
+import { motion } from "framer-motion"; // Animation Power
+import Orb from "./components/droids/Orb";
+import TerminalModal from "./components/TerminalModal";
+import StarBackground from "./components/StarBackground"; // Galaxy Import
+import AgentGrid from "./components/droids/AgentGrid"; // The Brain Monitor
+import { ShieldAlert, Rocket, Cpu } from "lucide-react";
 
 export default function Home() {
+  const [activeOrb, setActiveOrb] = useState<string | null>(null);
+
+  // Animation Variant for Title Letters
+  const titleVariant = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { delay: i * 0.1, duration: 0.5 } // Ekta ekta letter ashbe
+    }),
+  };
+
+  const titleText = "NOVA-OPS".split(""); // Text ke bhenge dilam
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="relative min-h-screen text-white flex flex-col items-center justify-center overflow-hidden selection:bg-cyan-500/30">
+      
+      {/* --- 1. GALAXY BACKGROUND (Z-Index 0) --- */}
+      <StarBackground />
+      
+      {/* Terminal Popup (Z-Index 50) */}
+      {activeOrb && (
+        <TerminalModal type={activeOrb} onClose={() => setActiveOrb(null)} />
+      )}
+
+      {/* --- 2. SYSTEM MONITOR (Agent Grid) --- */}
+      {/* Eta screen er Bottom-Right corner-e thakbe */}
+      <motion.div 
+        initial={{ x: 100, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ delay: 2, duration: 0.8 }}
+        className="absolute bottom-8 right-8 z-20 hidden lg:block" // Shudhu boro screen-e dekhabe
+      >
+        <AgentGrid />
+      </motion.div>
+
+      <div className="z-10 flex flex-col items-center w-full max-w-6xl px-4">
+        
+        {/* --- 3. ANIMATED HEADER --- */}
+        <div className="text-center mb-28 relative">
+          
+          {/* Glowing Aura behind text */}
+          <div className="absolute -inset-10 bg-blue-500/20 blur-[100px] rounded-full animate-pulse" />
+
+          {/* Staggered Letter Animation */}
+          <h1 className="flex justify-center text-7xl md:text-9xl font-black tracking-tighter drop-shadow-2xl">
+            {titleText.map((char, i) => (
+              <motion.span
+                key={i}
+                custom={i}
+                initial="hidden"
+                animate="visible"
+                variants={titleVariant}
+                whileHover={{ scale: 1.2, color: "#38bdf8", rotate: i % 2 === 0 ? 5 : -5 }} // Mouse nile natchbe
+                className="cursor-default bg-clip-text text-transparent bg-gradient-to-b from-white via-gray-200 to-gray-500 hover:to-blue-400 transition-colors"
+              >
+                {char}
+              </motion.span>
+            ))}
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+          {/* Subtitle with Typing Effect */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1, duration: 1 }}
+            className="flex items-center justify-center gap-3 mt-4 text-sm tracking-[0.6em] text-blue-200 font-mono uppercase"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <span className="animate-pulse">System Status</span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+            </span>
+            <span className="text-cyan-400 font-bold">OPTIMAL</span>
+          </motion.div>
         </div>
-      </main>
-    </div>
+
+        {/* --- 4. ORBS CONTAINER (Floating & Interactive) --- */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-24 md:gap-40"
+        >
+          {/* Security */}
+          <div onClick={() => setActiveOrb("Security")}>
+            <Orb label="Security" color="red" icon={ShieldAlert} />
+          </div>
+          
+          {/* Deploy */}
+          <div onClick={() => setActiveOrb("Deploy")}>
+            <Orb label="Deploy" color="blue" icon={Rocket} />
+          </div>
+          
+          {/* Config */}
+          <div onClick={() => setActiveOrb("Config")}>
+            <Orb label="Config" color="green" icon={Cpu} />
+          </div>
+        </motion.div>
+
+        {/* --- 5. FOOTER (Bottom Status) --- */}
+        <motion.div 
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 0.5 }}
+          transition={{ delay: 1.5 }}
+          className="absolute bottom-6 font-mono text-[10px] text-gray-500 tracking-[0.3em] uppercase w-full text-center pointer-events-none"
+        >
+          v4.0.1 // Automated Command Interface // Galactic Core
+        </motion.div>
+      
+      </div>
+    </main>
   );
 }

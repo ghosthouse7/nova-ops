@@ -1,16 +1,10 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --space-bg: #020617;
-  --star-white: #f8fafc;
-}
+/* Link to your config file so it reads your custom animations/colors */
+@config "../tailwind.config.ts";
 
+/* Default Theme */
 body {
-  background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%);
-  color: var(--star-white);
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+  background-color: #000; /* Black Background */
+  color: #fff;            /* White Text */
 }
