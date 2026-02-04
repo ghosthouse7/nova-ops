@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌌 NOVA OPS // SENTIENT INTERFACE
+> **The UI that feels. The Dashboard that lives.**
 
-## Getting Started
+![Project Status](https://img.shields.io/badge/Status-Operational-cyan)
+![Built With](https://img.shields.io/badge/Built%20With-Tambo%20AI-blueviolet)
+![Hackathon](https://img.shields.io/badge/The%20UI-Strikes%20Back-yellow)
 
-First, run the development server:
+## 🚨 Overview
+**NOVA OPS** is a next-generation **Generative UI System** built for the *The UI Strikes Back* Hackathon. Unlike static dashboards, NOVA uses **Tambo AI** to analyze user intent and emotional tone, dynamically rendering and modifying the interface in real-time.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+If you say "System Status", it stays **Cool Blue**.
+If you scream "WE ARE BEING HACKED!", it turns **Red, Glitches, and Shakes**.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Key Features (The "Wow" Factor)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🧠 1. Sentient Generative UI
+The interface doesn't just "show data"—it reacts to the context.
+- **Safe Mode:** Cyan/Blue theme, calm animations.
+- **Caution Mode:** Yellow theme, warning pulses.
+- **Critical Mode:** Red theme, violent shaking, glitch effects, and "Access Denied" logs.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🛡️ 2. Hybrid Intelligence Architecture
+To ensure **Enterprise-Grade Reliability** (and zero demo fails), NOVA uses a dual-core logic:
+1.  **Cloud Core (Tambo API):** Uses the LLM to intelligently decide when to render the `AgentGrid` tool.
+2.  **Local Core (Fallback Protocol):** If the API encounters latency or network errors, the local semantic analyzer takes over instantly, ensuring the UI **never crashes**.
 
-## Learn More
+### 🎬 3. Sci-Fi Visuals
+Powered by **Framer Motion** and **Tailwind CSS**, the dashboard features:
+- Live "Heartbeat" data simulation (CPU/RAM/NET).
+- Scrolling Terminal Logs (Matrix style).
+- CRT Scanning Line effects.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Framework:** Next.js 14 (App Router)
+- **AI Engine:** Tambo AI (Generative UI SDK / API)
+- **Styling:** Tailwind CSS
+- **Animation:** Framer Motion
+- **Language:** TypeScript
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📸 Screenshots
+*(Add your screenshots here later)*
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Safe Mode (Blue) | Critical Mode (Red) |
+| :---: | :---: |
+| *System Normal* | *Hacking Detected* |
+
+---
+
+## 🚀 How It Works (Under the Hood)
+
+1.  **User Input:** The user types a command (e.g., *"Unauthorized access detected!"*).
+2.  **Intent Analysis:** Tambo AI analyzes the prompt for "Tools".
+3.  **Generative Decision:** The AI decides to call the `AgentGrid` tool and sets parameters:
+    ```json
+    { "mode": "critical", "message": "SECURITY BREACH" }
+    ```
+4.  **Dynamic Rendering:** The frontend receives these props and hydrates the `AgentGrid` component with the specific "Critical" theme and animations.
+
+---
+
+## 💻 Getting Started
+
+1.  **Clone the Repository**
+    ```bash
+    git clone [https://github.com/your-username/nova-ops.git](https://github.com/your-username/nova-ops.git)
+    cd nova-ops
+    ```
+
+2.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
+
+3.  **Set Up Environment Variables**
+    Create a `.env.local` file:
+    ```bash
+    TAMBO_API_KEY=your_key_here
+    TAMBO_PROJECT_ID=your_project_id
+    ```
+
+4.  **Run the System**
+    ```bash
+    npm run dev
+    ```
+
+---
+
+## 🔮 Future Roadmap
+- [ ] Voice Command Integration.
+- [ ] Multi-Agent collaboration (Dev Droid vs Sec Droid).
+- [ ] 3D Holographic Elements using Three.js.
+
+---
+
+Made with 💻 & ☕ by **ghost_hunter** for **WeMakeDevs Hackathon**.
