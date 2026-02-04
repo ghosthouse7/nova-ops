@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { TamboAI } from "@tambo-ai/typescript-sdk";
 
-const tambo = new TamboAI({ apiKey: process.env.TAMBO_API_KEY ?? null });
+const tambo = new TamboAI();
 
 type ToolCall = {
   id: string;
@@ -26,6 +26,14 @@ function isModelConfigError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const msg = err.message.toLowerCase();
   return msg.includes("model") || msg.includes("unknown") || msg.includes("not found") || msg.includes("unsupported");
+}
+
+function safeAbort(controller: AbortController) {
+  try {
+    controller.abort();
+  } catch {
+    // Best-effort cleanup.
+  }
 }
 
 async function runTambo(
@@ -67,7 +75,7 @@ async function runTambo(
   });
 
   const timeout = setTimeout(() => {
-    stream.controller.abort();
+    safeAbort(stream.controller);
   }, 55_000);
 
   try {
@@ -76,6 +84,21 @@ async function runTambo(
       const event = rawEvent as Record<string, unknown>;
       const type = event.type;
       if (typeof type !== "string") continue;
+
+      if (
+        process.env.NODE_ENV !== "production" &&
+        ![
+          "RUN_STARTED",
+          "TEXT_MESSAGE_CONTENT",
+          "TOOL_CALL_START",
+          "TOOL_CALL_ARGS",
+          "TOOL_CALL_END",
+          "RUN_ERROR",
+          "RUN_FINISHED",
+        ].includes(type)
+      ) {
+        console.debug("[tambo] Unhandled stream event", { type, event });
+      }
 
       if (type === "RUN_STARTED") {
         if (typeof event.threadId === "string") threadId = event.threadId;
@@ -125,7 +148,7 @@ async function runTambo(
         completedToolCalls.push({ id: toolCallId, name: existing.name, args });
 
         if (existing.name === "AgentGrid") {
-          stream.controller.abort();
+          safeAbort(stream.controller);
           break;
         }
         continue;
@@ -159,9 +182,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ reply: "Missing message" }, { status: 400 });
     }
 
-    const forceAgentGrid = /\b(status|monitor|dashboard|health)\b/i.test(message);
+    const isShortQuery = message.split(/\s+/).filter(Boolean).length <= 10;
+    const forceAgentGrid = isShortQuery && /\b(status|monitor|dashboard|health)\b/i.test(message);
 
     let lastError: unknown;
+    const errorsByModel: Record<string, string> = {};
     for (const model of getModelCandidates()) {
       try {
         const { reply, toolCalls, threadId, runId } = await runTambo(
@@ -182,12 +207,14 @@ export async function POST(req: Request) {
         });
       } catch (err) {
         lastError = err;
+        if (err instanceof Error) errorsByModel[model] = err.message;
         if (isModelConfigError(err)) continue;
         throw err;
       }
     }
 
     const errorMessage = lastError instanceof Error ? lastError.message : "Tambo request failed.";
+    console.error("Tambo model attempts failed", errorsByModel);
     return NextResponse.json({ reply: errorMessage }, { status: 500 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected server error.";
