@@ -28,6 +28,7 @@ function safeAbort(controller: AbortController) {
 
 async function runTambo(
   projectId: string, 
+  userKey: string,
   message: string,
   model: string,
   toolChoice: "auto" | "required" | "none" | { name: string } = "auto",
@@ -44,14 +45,11 @@ async function runTambo(
   let threadId: string | null = null;
   let runId: string | null = null;
 
-  // --- THE FIX IS HERE ---
   const stream = await tambo.threads.runs.create({
-    // @ts-ignore
-    projectId: projectId,
-    
-    // 🔥 NEW LINE: WE GIVE A FAKE USER ID
-    userKey: "nova_demo_user_01", 
-    
+    userKey,
+    thread: {
+      userKey,
+    },
     message: {
       role: "user",
       content: [{ type: "text", text: message }],
@@ -69,7 +67,7 @@ async function runTambo(
         },
       },
     ],
-  });
+  }, { query: { projectId } });
 
   const timeout = setTimeout(() => {
     safeAbort(stream.controller);
@@ -155,12 +153,16 @@ export async function POST(req: Request) {
      return NextResponse.json({ reply: "Missing TAMBO_PROJECT_ID" }, { status: 500 });
   }
 
+  const fallbackUserKey = process.env.TAMBO_USER_KEY?.trim() || "nova_user_01";
+
   try {
     const body = await req.json().catch(() => null);
     const message = typeof body?.message === "string" ? body.message.trim() : "";
     if (!message) {
       return NextResponse.json({ reply: "Missing message" }, { status: 400 });
     }
+
+    const userKey = typeof body?.userKey === "string" ? body.userKey.trim() : fallbackUserKey;
 
     const isShortQuery = message.split(/\s+/).filter(Boolean).length <= 10;
     const forceAgentGrid = isShortQuery && /\b(status|monitor|dashboard|health)\b/i.test(message);
@@ -172,6 +174,7 @@ export async function POST(req: Request) {
         console.log(`Trying model: ${model} with userKey on project: ${projectId}`);
         const { reply, toolCalls, threadId, runId } = await runTambo(
           projectId, 
+          userKey,
           message,
           model,
           forceAgentGrid ? { name: "AgentGrid" } : "auto",
