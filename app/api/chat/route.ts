@@ -1,79 +1,196 @@
 import { NextResponse } from "next/server";
 import { TamboAI } from "@tambo-ai/typescript-sdk";
 
-const tambo = new TamboAI({
-  apiKey: process.env.TAMBO_API_KEY || "",
-});
+const tambo = new TamboAI({ apiKey: process.env.TAMBO_API_KEY ?? null });
+
+type ToolCall = {
+  id: string;
+  name: string;
+  args: unknown;
+};
+
+function getModelCandidates(): string[] {
+  const envModel = process.env.TAMBO_MODEL?.trim();
+
+  return [
+    envModel,
+    // Prefer a cheap/free-tier model if the project supports it.
+    "gpt-4o-mini-2024-07-18",
+    "gpt-4o-mini",
+    // Matches the model suggested in the issue.
+    "gpt-4.1-2025-04-14",
+  ].filter((m): m is string => Boolean(m));
+}
+
+function isModelConfigError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return msg.includes("model") || msg.includes("unknown") || msg.includes("not found") || msg.includes("unsupported");
+}
+
+async function runTambo(
+  message: string,
+  model: string,
+  toolChoice: "auto" | "required" | "none" | { name: string } = "auto",
+): Promise<{
+  reply: string;
+  toolCalls: ToolCall[];
+  threadId: string | null;
+  runId: string | null;
+}> {
+  const toolCallsById = new Map<string, { name: string; argsJson: string }>();
+  const completedToolCalls: ToolCall[] = [];
+
+  let reply = "";
+  let threadId: string | null = null;
+  let runId: string | null = null;
+
+  const stream = await tambo.threads.runs.create({
+    message: {
+      role: "user",
+      content: [{ type: "text", text: message }],
+    },
+    model,
+    toolChoice,
+    tools: [
+      {
+        name: "AgentGrid",
+        description:
+          "Render the AgentGrid system monitor when the user asks for status, monitoring, dashboard, system health, or similar.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+      },
+    ],
+  });
+
+  const timeout = setTimeout(() => {
+    stream.controller.abort();
+  }, 55_000);
+
+  try {
+    for await (const rawEvent of stream as AsyncIterable<unknown>) {
+      if (!rawEvent || typeof rawEvent !== "object") continue;
+      const event = rawEvent as Record<string, unknown>;
+      const type = event.type;
+      if (typeof type !== "string") continue;
+
+      if (type === "RUN_STARTED") {
+        if (typeof event.threadId === "string") threadId = event.threadId;
+        if (typeof event.runId === "string") runId = event.runId;
+        continue;
+      }
+
+      if (type === "TEXT_MESSAGE_CONTENT" && typeof event.delta === "string") {
+        reply += event.delta;
+        continue;
+      }
+
+      if (type === "TOOL_CALL_START") {
+        const toolCallId = typeof event.toolCallId === "string" ? event.toolCallId : null;
+        const toolCallName = typeof event.toolCallName === "string" ? event.toolCallName : null;
+        if (!toolCallId || !toolCallName) continue;
+        toolCallsById.set(toolCallId, { name: toolCallName, argsJson: "" });
+        continue;
+      }
+
+      if (type === "TOOL_CALL_ARGS") {
+        const toolCallId = typeof event.toolCallId === "string" ? event.toolCallId : null;
+        const delta = typeof event.delta === "string" ? event.delta : null;
+        if (!toolCallId || !delta) continue;
+        const existing = toolCallsById.get(toolCallId);
+        if (!existing) continue;
+        existing.argsJson += delta;
+        continue;
+      }
+
+      if (type === "TOOL_CALL_END") {
+        const toolCallId = typeof event.toolCallId === "string" ? event.toolCallId : null;
+        if (!toolCallId) continue;
+        const existing = toolCallsById.get(toolCallId);
+        if (!existing) continue;
+
+        let args: unknown = {};
+        const argsJson = existing.argsJson.trim();
+        if (argsJson.length > 0) {
+          try {
+            args = JSON.parse(argsJson);
+          } catch {
+            args = argsJson;
+          }
+        }
+
+        completedToolCalls.push({ id: toolCallId, name: existing.name, args });
+
+        if (existing.name === "AgentGrid") {
+          stream.controller.abort();
+          break;
+        }
+        continue;
+      }
+
+      if (type === "RUN_ERROR") {
+        const message = typeof event.message === "string" ? event.message : "Run failed.";
+        throw new Error(message);
+      }
+
+      if (type === "RUN_FINISHED") {
+        break;
+      }
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  return { reply: reply.trim(), toolCalls: completedToolCalls, threadId, runId };
+}
 
 export async function POST(req: Request) {
-  const projectId = process.env.TAMBO_PROJECT_ID?.trim();
-
-  // 1. Config Check
-  if (!process.env.TAMBO_API_KEY || !projectId) {
-    return NextResponse.json({ reply: "⚠️ Config Error" }, { status: 500 });
+  if (!process.env.TAMBO_API_KEY) {
+    return NextResponse.json({ reply: "Missing TAMBO_API_KEY" }, { status: 500 });
   }
 
   try {
-    const { message } = await req.json();
-    console.log(`🔥 [ATTEMPT] Connecting to Tambo Project: ${projectId}`);
-    
-    // --- STEP 1: DEFINE VARIABLES ---
-    let replyText = "";
-    let component = null;
-    let isApiSuccess = false;
-
-    // --- STEP 2: TRY THE API (Honest Attempt) ---
-    try {
-        // Check SDK existence
-        if (!tambo.beta?.threads) throw new Error("SDK Missing");
-
-        // Attempt Connection
-        const thread = await tambo.beta.threads.create({
-            // @ts-ignore
-            projectId: projectId,
-            model: "gpt-4.1-2025-04-14", // Standard Free Model
-            messages: [{ role: "user", content: message }],
-        } as any);
-
-        console.log("✅ API ONLINE: Thread ID:", thread.id);
-        isApiSuccess = true;
-        replyText = "Tambo Agent Connected.";
-    } catch (apiError: any) {
-        // --- STEP 3: THE CIRCUIT BREAKER (If 500 Error, We Catch It) ---
-        console.error("⚠️ TAMBO SERVER ERROR (500):", apiError.message);
-        console.log("🛡️ Circuit Breaker Activated: Switching to Local Mode.");
-        
-        // We do NOT crash. We continue.
-        isApiSuccess = false;
+    const body = await req.json().catch(() => null);
+    const message = typeof body?.message === "string" ? body.message.trim() : "";
+    if (!message) {
+      return NextResponse.json({ reply: "Missing message" }, { status: 400 });
     }
 
-    // --- STEP 4: INTELLIGENT RESPONSE (Best Use Case) ---
-    // Whether API worked or failed, we analyze User Intent.
-    
-    const lowerMsg = message.toLowerCase();
-    
-    if (lowerMsg.includes("status") || lowerMsg.includes("monitor")) {
-        // Judge will see: "User asked for status -> System showed Grid"
-        component = "AgentGrid";
-        
-        if (isApiSuccess) {
-            replyText = "Tambo: System Matrix Loaded.";
-        } else {
-            replyText = "⚠️ Tambo API Unreachable. Displaying Local Cached Matrix...";
-        }
-    } else {
-        replyText = isApiSuccess ? "Command Received." : "⚠️ Server connection failed. Retrying...";
+    const forceAgentGrid = /\b(status|monitor|dashboard|health)\b/i.test(message);
+
+    let lastError: unknown;
+    for (const model of getModelCandidates()) {
+      try {
+        const { reply, toolCalls, threadId, runId } = await runTambo(
+          message,
+          model,
+          forceAgentGrid ? { name: "AgentGrid" } : "auto",
+        );
+
+        const shouldRenderGrid = toolCalls.some((t) => t.name === "AgentGrid");
+        return NextResponse.json({
+          reply: reply || "",
+          model,
+          threadId,
+          runId,
+          toolCalls,
+          // Legacy field for the current frontend, derived from tool calls.
+          component: shouldRenderGrid ? "AgentGrid" : null,
+        });
+      } catch (err) {
+        lastError = err;
+        if (isModelConfigError(err)) continue;
+        throw err;
+      }
     }
 
-    // Return 200 OK so the UI never breaks
-    return NextResponse.json({ 
-        reply: replyText, 
-        component: component 
-    });
-
-  } catch (criticalError: any) {
-    // Only if something catastrophic happens in OUR code
-    console.error("💀 SYSTEM FAILURE:", criticalError);
-    return NextResponse.json({ reply: "Critical System Error.", component: null });
+    const errorMessage = lastError instanceof Error ? lastError.message : "Tambo request failed.";
+    return NextResponse.json({ reply: errorMessage }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unexpected server error.";
+    return NextResponse.json({ reply: message }, { status: 500 });
   }
 }
