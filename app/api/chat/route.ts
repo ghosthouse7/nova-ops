@@ -16,11 +16,11 @@ function getModelCandidates(): string[] {
 
   return [
     envModel,
-    // Prefer a cheap/free-tier model if the project supports it.
-    "gpt-4o-mini-2024-07-18",
-    "gpt-4o-mini",
-    // Matches the model suggested in the issue.
+    // Matches the model suggested in the issue as the primary free-tier option.
     "gpt-4.1-2025-04-14",
+    // Prefer a cheap/free-tier model if the project supports it.
+    "gpt-4o-mini",
+    "gpt-4o-mini-2024-07-18",
   ].filter((m): m is string => Boolean(m));
 }
 
@@ -30,10 +30,13 @@ function isModelConfigError(err: unknown): boolean {
   return msg.includes("unknown model") || msg.includes("model not found") || msg.includes("unsupported model");
 }
 
-function safeAbort(controller: unknown) {
+function safeAbort(controller: unknown, state?: { aborted: boolean }) {
+  if (state?.aborted) return;
+
   try {
     if (controller && typeof (controller as { abort?: unknown }).abort === "function") {
       (controller as { abort: () => void }).abort();
+      if (state) state.aborted = true;
     }
   } catch (error) {
     console.error("[tambo] Failed to abort stream controller", error);
@@ -79,8 +82,9 @@ async function runTambo(
     ],
   });
 
+  const abortState = { aborted: false };
   const timeout = setTimeout(() => {
-    safeAbort(stream.controller);
+    safeAbort(stream.controller, abortState);
   }, 55_000);
 
   try {
@@ -165,7 +169,7 @@ async function runTambo(
         completedToolCalls.push({ id: toolCallId, name: existing.name, args });
 
         if (existing.name === "AgentGrid") {
-          safeAbort(stream.controller);
+          safeAbort(stream.controller, abortState);
           break;
         }
         continue;
@@ -249,8 +253,22 @@ export async function POST(req: Request) {
     }
 
     const errorMessage = lastError instanceof Error ? lastError.message : "Tambo request failed.";
-    console.error("Tambo model attempts failed", errorsByModel);
-    return NextResponse.json({ reply: errorMessage }, { status: 500 });
+    console.error("Tambo model attempts failed", { errorsByModel, errorMessage });
+
+    const isProd = process.env.NODE_ENV === "production";
+    return NextResponse.json(
+      isProd
+        ? {
+            reply: "Upstream AI service is currently unavailable. Please try again later.",
+            errorCode: "TAMBO_UPSTREAM_FAILURE",
+          }
+        : {
+            reply: errorMessage,
+            errorCode: "TAMBO_UPSTREAM_FAILURE",
+            errorsByModel,
+          },
+      { status: 502 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected server error.";
     return NextResponse.json({ reply: message }, { status: 500 });
