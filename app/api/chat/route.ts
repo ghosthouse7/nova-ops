@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { TamboAI } from "@tambo-ai/typescript-sdk";
 
-const tambo = new TamboAI();
-
 type ToolCall = {
   id: string;
   name: string;
@@ -39,6 +37,7 @@ function safeAbort(controller: AbortController) {
 }
 
 async function runTambo(
+  tambo: TamboAI,
   message: string,
   model: string,
   toolChoice: "auto" | "required" | "none" | { name: string } = "auto",
@@ -182,6 +181,8 @@ export async function POST(req: Request) {
   }
 
   try {
+    const tambo = new TamboAI({ apiKey: process.env.TAMBO_API_KEY });
+
     const body = await req.json().catch(() => null);
     const message = typeof body?.message === "string" ? body.message.trim() : "";
     if (!message) {
@@ -200,6 +201,7 @@ export async function POST(req: Request) {
     for (const model of getModelCandidates()) {
       try {
         const { reply, toolCalls, threadId, runId } = await runTambo(
+          tambo,
           message,
           model,
           forceAgentGrid ? { name: "AgentGrid" } : "auto",
