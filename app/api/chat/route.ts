@@ -27,14 +27,16 @@ function getModelCandidates(): string[] {
 function isModelConfigError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const msg = err.message.toLowerCase();
-  return msg.includes("model") || msg.includes("unknown") || msg.includes("not found") || msg.includes("unsupported");
+  return msg.includes("unknown model") || msg.includes("model not found") || msg.includes("unsupported model");
 }
 
-function safeAbort(controller: AbortController) {
+function safeAbort(controller: unknown) {
   try {
-    controller.abort();
-  } catch {
-    console.error("[tambo] Failed to abort stream controller");
+    if (controller && typeof (controller as { abort?: unknown }).abort === "function") {
+      (controller as { abort: () => void }).abort();
+    }
+  } catch (error) {
+    console.error("[tambo] Failed to abort stream controller", error);
   }
 }
 
