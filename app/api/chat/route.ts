@@ -235,10 +235,14 @@ export async function POST(req: Request) {
         lastError = err;
         if (err instanceof Error) errorsByModel[model] = err.message;
         if (isModelConfigError(err)) continue;
-        if (err instanceof Error) {
-          throw new Error(`[${model}] ${err.message}`);
-        }
-        throw new Error(`[${model}] Tambo request failed.`);
+
+        console.error("[tambo] Model attempt failed", {
+          model,
+          error: err instanceof Error ? err.message : String(err),
+        });
+
+        if (err instanceof Error) throw err;
+        throw new Error("Tambo request failed.");
       }
     }
 
