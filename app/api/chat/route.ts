@@ -27,7 +27,8 @@ function safeAbort(controller: AbortController) {
 }
 
 async function runTambo(
-  projectId: string, 
+  projectId: string,
+  userKey: string,
   message: string,
   model: string,
   toolChoice: "auto" | "required" | "none" | { name: string } = "auto",
@@ -44,14 +45,8 @@ async function runTambo(
   let threadId: string | null = null;
   let runId: string | null = null;
 
-  // --- THE FIX IS HERE ---
   const stream = await tambo.threads.runs.create({
-    // @ts-ignore
-    projectId: projectId,
-    
-    // 🔥 NEW LINE: WE GIVE A FAKE USER ID
-    userKey: "nova_demo_user_01", 
-    
+    userKey,
     message: {
       role: "user",
       content: [{ type: "text", text: message }],
@@ -69,7 +64,7 @@ async function runTambo(
         },
       },
     ],
-  });
+  }, { query: { projectId } });
 
   const timeout = setTimeout(() => {
     safeAbort(stream.controller);
@@ -152,8 +147,10 @@ export async function POST(req: Request) {
 
   const projectId = process.env.TAMBO_PROJECT_ID?.trim();
   if (!projectId) {
-     return NextResponse.json({ reply: "Missing TAMBO_PROJECT_ID" }, { status: 500 });
+    return NextResponse.json({ reply: "Missing TAMBO_PROJECT_ID" }, { status: 500 });
   }
+
+  const envUserKey = process.env.TAMBO_USER_KEY?.trim() || "";
 
   try {
     const body = await req.json().catch(() => null);
@@ -162,6 +159,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ reply: "Missing message" }, { status: 400 });
     }
 
+    const hasUserKeyField =
+      body !== null &&
+      typeof body === "object" &&
+      Object.prototype.hasOwnProperty.call(body, "userKey");
+    const userKeyFromBody = typeof body?.userKey === "string" ? body.userKey.trim() : "";
+    if (hasUserKeyField && !userKeyFromBody) {
+      return NextResponse.json({ reply: "userKey must be a non-empty string" }, { status: 400 });
+    }
+
+    const userKey = userKeyFromBody || envUserKey;
+    if (!userKey) {
+      return NextResponse.json({ reply: "userKey is required" }, { status: 400 });
+    }
+
+    const userKeySource = userKeyFromBody ? "body" : "env";
+
     const isShortQuery = message.split(/\s+/).filter(Boolean).length <= 10;
     const forceAgentGrid = isShortQuery && /\b(status|monitor|dashboard|health)\b/i.test(message);
 
@@ -169,9 +182,12 @@ export async function POST(req: Request) {
     
     for (const model of getModelCandidates()) {
       try {
-        console.log(`Trying model: ${model} with userKey on project: ${projectId}`);
+        console.log(
+          `Trying model: ${model} (projectId: ${projectId}, userKeySource: ${userKeySource})`,
+        );
         const { reply, toolCalls, threadId, runId } = await runTambo(
-          projectId, 
+          projectId,
+          userKey,
           message,
           model,
           forceAgentGrid ? { name: "AgentGrid" } : "auto",
