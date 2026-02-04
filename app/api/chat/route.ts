@@ -27,7 +27,6 @@ function safeAbort(controller: AbortController) {
 }
 
 async function runTambo(
-  projectId: string, 
   userKey: string,
   message: string,
   model: string,
@@ -67,7 +66,7 @@ async function runTambo(
         },
       },
     ],
-  }, { query: { projectId } });
+  });
 
   const timeout = setTimeout(() => {
     safeAbort(stream.controller);
@@ -148,12 +147,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ reply: "Missing TAMBO_API_KEY" }, { status: 500 });
   }
 
-  const projectId = process.env.TAMBO_PROJECT_ID?.trim();
-  if (!projectId) {
-     return NextResponse.json({ reply: "Missing TAMBO_PROJECT_ID" }, { status: 500 });
-  }
-
-  const fallbackUserKey = process.env.TAMBO_USER_KEY?.trim() || "nova_user_01";
+  const envUserKey = process.env.TAMBO_USER_KEY?.trim() || "";
 
   try {
     const body = await req.json().catch(() => null);
@@ -162,7 +156,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ reply: "Missing message" }, { status: 400 });
     }
 
-    const userKey = typeof body?.userKey === "string" ? body.userKey.trim() : fallbackUserKey;
+    const userKeyFromBody = typeof body?.userKey === "string" ? body.userKey.trim() : "";
+    const userKey = userKeyFromBody || envUserKey;
+    if (!userKey) {
+      return NextResponse.json({ reply: "Missing userKey" }, { status: 400 });
+    }
 
     const isShortQuery = message.split(/\s+/).filter(Boolean).length <= 10;
     const forceAgentGrid = isShortQuery && /\b(status|monitor|dashboard|health)\b/i.test(message);
@@ -171,9 +169,8 @@ export async function POST(req: Request) {
     
     for (const model of getModelCandidates()) {
       try {
-        console.log(`Trying model: ${model} with userKey on project: ${projectId}`);
+        console.log(`Trying model: ${model}`);
         const { reply, toolCalls, threadId, runId } = await runTambo(
-          projectId, 
           userKey,
           message,
           model,
