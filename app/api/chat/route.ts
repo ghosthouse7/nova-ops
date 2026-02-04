@@ -9,6 +9,8 @@ type ToolCall = {
   args: unknown;
 };
 
+const MAX_MESSAGE_CHARS = 8000;
+
 function getModelCandidates(): string[] {
   const envModel = process.env.TAMBO_MODEL?.trim();
 
@@ -141,7 +143,11 @@ async function runTambo(
           try {
             args = JSON.parse(argsJson);
           } catch {
-            args = argsJson;
+            console.warn("[tambo] Failed to parse tool args as JSON", {
+              toolCallId,
+              toolName: existing.name,
+            });
+            args = {};
           }
         }
 
@@ -182,6 +188,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ reply: "Missing message" }, { status: 400 });
     }
 
+    if (message.length > MAX_MESSAGE_CHARS) {
+      return NextResponse.json({ reply: `Message too long (max ${MAX_MESSAGE_CHARS} chars)` }, { status: 400 });
+    }
+
     const isShortQuery = message.split(/\s+/).filter(Boolean).length <= 10;
     const forceAgentGrid = isShortQuery && /\b(status|monitor|dashboard|health)\b/i.test(message);
 
@@ -209,7 +219,10 @@ export async function POST(req: Request) {
         lastError = err;
         if (err instanceof Error) errorsByModel[model] = err.message;
         if (isModelConfigError(err)) continue;
-        throw err;
+        if (err instanceof Error) {
+          throw new Error(`[${model}] ${err.message}`);
+        }
+        throw new Error(`[${model}] Tambo request failed.`);
       }
     }
 
