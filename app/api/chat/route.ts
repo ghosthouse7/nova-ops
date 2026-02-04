@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { TamboAI } from "@tambo-ai/typescript-sdk";
 
+type ToolArgs = Record<string, unknown>;
+
 type ToolCall = {
   id: string;
   name: string;
-  args: unknown;
+  args: ToolArgs;
 };
 
 const MAX_MESSAGE_CHARS = 8000;
@@ -32,7 +34,7 @@ function safeAbort(controller: AbortController) {
   try {
     controller.abort();
   } catch {
-    // Best-effort cleanup.
+    console.error("[tambo] Failed to abort stream controller");
   }
 }
 
@@ -65,7 +67,7 @@ async function runTambo(
       {
         name: "AgentGrid",
         description:
-          "Render the AgentGrid system monitor when the user asks for status, monitoring, dashboard, system health, or similar.",
+          "Render the AgentGrid system monitor when the user asks for status, monitoring, dashboard, system health, or similar. This tool takes no arguments.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -136,11 +138,19 @@ async function runTambo(
         const existing = toolCallsById.get(toolCallId);
         if (!existing) continue;
 
-        let args: unknown = {};
+        let args: ToolArgs = {};
         const argsJson = existing.argsJson.trim();
         if (argsJson.length > 0) {
           try {
-            args = JSON.parse(argsJson);
+            const parsed = JSON.parse(argsJson);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              args = parsed as ToolArgs;
+            } else {
+              console.warn("[tambo] Tool args was not an object", {
+                toolCallId,
+                toolName: existing.name,
+              });
+            }
           } catch {
             console.warn("[tambo] Failed to parse tool args as JSON", {
               toolCallId,
@@ -170,6 +180,10 @@ async function runTambo(
     }
   } finally {
     clearTimeout(timeout);
+  }
+
+  if (!reply.trim() && completedToolCalls.some((t) => t.name === "AgentGrid")) {
+    reply = "Launching AgentGrid system monitor.";
   }
 
   return { reply: reply.trim(), toolCalls: completedToolCalls, threadId, runId };
