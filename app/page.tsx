@@ -8,9 +8,14 @@ import StarBackground from "./components/StarBackground"; // Galaxy Import
 import AgentGrid from "./components/droids/AgentGrid"; // The Brain Monitor
 import LogTicker from "./components/droids/LogTicker";
 import { ShieldAlert, Rocket, Cpu } from "lucide-react";
+import { playClick } from "@/utils/sound";
 
 export default function Home() {
   const [activeOrb, setActiveOrb] = useState<string | null>(null);
+
+  const handleSend = () => {
+    playClick();
+  };
 
   // Animation Variant for Title Letters
   const titleVariant = {
@@ -32,7 +37,7 @@ export default function Home() {
       
       {/* Terminal Popup (Z-Index 50) */}
       {activeOrb && (
-        <TerminalModal type={activeOrb} onClose={() => setActiveOrb(null)} />
+        <TerminalModal type={activeOrb} onClose={() => setActiveOrb(null)} onSend={handleSend} />
       )}
 
       {/* --- 2. SYSTEM MONITOR (Agent Grid) --- */}

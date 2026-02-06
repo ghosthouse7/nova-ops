@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { playAlert, playSuccess } from "@/utils/sound";
 
 const CRITICAL_SHAKE_X = [0, -6, 6, -6, 6, 0];
 
@@ -14,6 +15,8 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
   // 1. DYNAMIC DATA STATE (Live Numbers)
   const [metrics, setMetrics] = useState({ cpu: 12, mem: 45, net: 20 });
   const [logs, setLogs] = useState<string[]>([]);
+  const prevModeRef = useRef<"safe" | "caution" | "critical" | null>(null);
+  const stopAlertRef = useRef<null | (() => void)>(null);
 
   // 2. THEME CONFIGURATION
   const themes = {
@@ -25,6 +28,31 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
   const isCritical = mode === "critical";
   const accentTextClass = isCritical ? "text-red-400" : mode === "caution" ? "text-yellow-400" : "text-cyan-400";
   const containerBgClass = isCritical ? "bg-red-950/60" : "bg-black/80";
+
+  useEffect(() => {
+    const prevMode = prevModeRef.current;
+
+    if (mode === "critical" && prevMode !== "critical") {
+      stopAlertRef.current?.();
+      stopAlertRef.current = playAlert();
+    } else if (prevMode === "critical" && mode !== "critical") {
+      stopAlertRef.current?.();
+      stopAlertRef.current = null;
+    }
+
+    if (prevMode !== null && prevMode !== "safe" && mode === "safe") {
+      playSuccess();
+    }
+
+    prevModeRef.current = mode;
+  }, [mode]);
+
+  useEffect(() => {
+    return () => {
+      stopAlertRef.current?.();
+      stopAlertRef.current = null;
+    };
+  }, []);
 
   // 3. LIVE SIMULATION EFFECT (Heartbeat)
   useEffect(() => {

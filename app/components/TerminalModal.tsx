@@ -7,20 +7,27 @@ import AgentGrid from "./droids/AgentGrid";
 interface TerminalProps {
   type: string;
   onClose: () => void;
+  onSend: () => void;
 }
 
 // Define type for log entries: can be simple text or a complex component
-type LogEntry = string | { type: "component"; content: React.ReactNode };
+type LogEntry =
+  | string
+  | {
+      type: "AgentGrid";
+      componentProps: { mode?: "safe" | "caution" | "critical"; message?: string };
+    };
 
 const isAgentGridMode = (value: unknown): value is "safe" | "caution" | "critical" =>
   value === "safe" || value === "caution" || value === "critical";
 
-export default function TerminalModal({ type, onClose }: TerminalProps) {
+export default function TerminalModal({ type, onClose, onSend }: TerminalProps) {
   // State updated to hold text OR components
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const submittingRef = useRef(false);
 
   // Auto-scroll to bottom on new logs
   const scrollToBottom = () => {
@@ -38,21 +45,26 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
     ]);
   }, [type]);
 
-  // Command Handler
-  const handleCommand = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !loading) {
-      if (!input.trim()) return;
+  const isAgentGridLogEntry = (entry: LogEntry): entry is Extract<LogEntry, { type: "AgentGrid" }> =>
+    typeof entry !== "string" && entry.type === "AgentGrid";
 
-      const command = input.trim();
+  const submitCommand = async (rawInput?: string) => {
+    if (loading || submittingRef.current) return;
+
+    const command = (typeof rawInput === "string" ? rawInput : input).trim();
+    if (!command) return;
+
+    submittingRef.current = true;
+    try {
+      onSend();
+
       // Add user command to logs
       setLogs((prev) => [...prev, `user@nova:~$ ${command}`]);
       setInput("");
-      setLoading(true);
 
       // Handle Local Commands
       if (command.toLowerCase() === "clear") {
         setLogs([]);
-        setLoading(false);
         return;
       }
       if (command.toLowerCase() === "exit") {
@@ -60,7 +72,7 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
         return;
       }
 
-      // API Call to Backend (Tambo)
+      setLoading(true);
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
@@ -82,18 +94,46 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
           const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
           const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
 
-          setLogs((prev) => [...prev, { 
-            type: "component", 
-            content: <AgentGrid mode={mode} message={message} /> 
-          }]); 
+          setLogs((prev) => {
+            const next = [...prev];
+            let index = -1;
+            for (let i = next.length - 1; i >= 0; i--) {
+              if (isAgentGridLogEntry(next[i])) {
+                index = i;
+                break;
+              }
+            }
+            const updated: LogEntry = {
+              type: "AgentGrid",
+              componentProps: { mode, message },
+            };
+
+            if (index === -1) {
+              next.push(updated);
+              return next;
+            }
+
+            next[index] = updated;
+            return next;
+          });
         }
-      
       } catch {
         setLogs((prev) => [...prev, `> ERROR: Uplink failed. Check network connection.`]);
       } finally {
         setLoading(false);
       }
+    } finally {
+      submittingRef.current = false;
     }
+  };
+
+  // Command Handler
+  const handleCommand = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter" || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (loading || submittingRef.current) return;
+    if (!input.trim()) return;
+
+    void submitCommand(input);
   };
 
   return (
@@ -128,7 +168,7 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
                   <div className="absolute -top-3 left-4 bg-[#0a0a0a] px-2 text-[10px] text-green-500 uppercase tracking-widest border border-green-500/30 rounded">
                     :: GENERATIVE_UI_MODULE ::
                   </div>
-                  {log.content}
+                  <AgentGrid mode={log.componentProps.mode} message={log.componentProps.message} />
                 </div>
               )}
             </div>
@@ -156,6 +196,14 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
             autoFocus
             autoComplete="off"
           />
+          <button
+            type="button"
+            onClick={() => void submitCommand(input)}
+            disabled={loading || !input.trim()}
+            className="rounded border border-cyan-500/40 px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-cyan-300 transition-colors hover:bg-cyan-500/10 disabled:opacity-40"
+          >
+            SEND
+          </button>
         </div>
 
       </div>
