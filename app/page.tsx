@@ -6,6 +6,7 @@ import Orb from "./components/droids/Orb";
 import TerminalModal from "./components/TerminalModal";
 import StarBackground from "./components/StarBackground"; // Galaxy Import
 import AgentGrid from "./components/droids/AgentGrid"; // The Brain Monitor
+import LogTicker from "./components/droids/LogTicker";
 import { ShieldAlert, Rocket, Cpu } from "lucide-react";
 
 export default function Home() {
@@ -114,12 +115,14 @@ export default function Home() {
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 0.5 }}
           transition={{ delay: 1.5 }}
-          className="absolute bottom-6 font-mono text-[10px] text-gray-500 tracking-[0.3em] uppercase w-full text-center pointer-events-none"
+          className="absolute bottom-12 font-mono text-[10px] text-gray-500 tracking-[0.3em] uppercase w-full text-center pointer-events-none"
         >
           v4.0.1 // Automated Command Interface // Galactic Core
         </motion.div>
       
       </div>
+
+      <LogTicker />
     </main>
   );
 }
