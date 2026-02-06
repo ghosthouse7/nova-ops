@@ -9,9 +9,11 @@ const CRITICAL_SHAKE_X = [0, -6, 6, -6, 6, 0];
 interface AgentGridProps {
   mode?: "safe" | "caution" | "critical";
   message?: string;
+  actions?: string[];
+  onActionSelect?: (action: string) => void;
 }
 
-export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: AgentGridProps) {
+export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL", actions, onActionSelect }: AgentGridProps) {
   // 1. DYNAMIC DATA STATE (Live Numbers)
   const [metrics, setMetrics] = useState({ cpu: 12, mem: 45, net: 20 });
   const [logs, setLogs] = useState<string[]>([]);
@@ -143,6 +145,25 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
                </span>
             </div>
           </div>
+
+          {/* SMART ACTIONS */}
+          {actions && actions.length > 0 && (
+            <div className="mb-6 relative z-10">
+              <div className={`mb-2 text-[10px] font-bold tracking-[0.25em] uppercase ${accentTextClass}`}>NEXT ACTIONS</div>
+              <div className="flex flex-wrap gap-2">
+                {actions.map((action, index) => (
+                  <button
+                    key={`${action}-${index}`}
+                    type="button"
+                    onClick={() => onActionSelect?.(action)}
+                    className={`rounded border ${theme.border} bg-white/5 px-3 py-2 text-[10px] font-bold tracking-[0.2em] uppercase ${accentTextClass} transition-all hover:bg-white/10 hover:shadow-xl ${theme.shadow} active:scale-[0.98]`}
+                  >
+                    {action}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* SCROLLING TERMINAL LOGS */}
           <div className="bg-black/50 p-2 rounded border border-white/10 font-mono text-[10px] h-24 overflow-hidden relative z-10">
