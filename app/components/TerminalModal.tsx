@@ -7,6 +7,7 @@ import AgentGrid from "./droids/AgentGrid";
 interface TerminalProps {
   type: string;
   onClose: () => void;
+  onSend?: () => void;
 }
 
 // Define type for log entries: can be simple text or a complex component
@@ -15,7 +16,7 @@ type LogEntry = string | { type: "component"; content: React.ReactNode };
 const isAgentGridMode = (value: unknown): value is "safe" | "caution" | "critical" =>
   value === "safe" || value === "caution" || value === "critical";
 
-export default function TerminalModal({ type, onClose }: TerminalProps) {
+export default function TerminalModal({ type, onClose, onSend }: TerminalProps) {
   // State updated to hold text OR components
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [input, setInput] = useState("");
@@ -42,6 +43,8 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
   const handleCommand = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !loading) {
       if (!input.trim()) return;
+
+      onSend?.();
 
       const command = input.trim();
       // Add user command to logs
