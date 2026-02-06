@@ -138,6 +138,7 @@ export function playAlert(): () => void {
   let stopped = false;
   let initialized = false;
   let interval: ReturnType<typeof setInterval> | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   let out: GainNode | null = null;
   let lowPass: BiquadFilterNode | null = null;
   let gate: GainNode | null = null;
@@ -149,6 +150,8 @@ export function playAlert(): () => void {
     stopped = true;
     if (interval) clearInterval(interval);
     interval = null;
+    if (timeout) clearTimeout(timeout);
+    timeout = null;
 
     if (!initialized) return;
 
@@ -170,6 +173,8 @@ export function playAlert(): () => void {
       safeDisconnect(out);
     };
   };
+
+  timeout = setTimeout(stop, 30000);
 
   void resumeIfNeeded(ctx).then(() => {
     if (stopped) return;

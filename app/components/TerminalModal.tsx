@@ -96,7 +96,13 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
 
           setLogs((prev) => {
             const next = [...prev];
-            const index = next.findIndex(isAgentGridLogEntry);
+            let index = -1;
+            for (let i = next.length - 1; i >= 0; i--) {
+              if (isAgentGridLogEntry(next[i])) {
+                index = i;
+                break;
+              }
+            }
             const updated: LogEntry = {
               type: "AgentGrid",
               componentProps: { mode, message },
