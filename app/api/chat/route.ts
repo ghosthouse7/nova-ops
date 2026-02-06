@@ -9,6 +9,16 @@ export async function POST(req: Request) {
     const body = await req.json();
     const message = body.message || "";
     const lowerMsg = message.toLowerCase();
+
+    const securityBreachTriggered =
+      lowerMsg.includes("hack") ||
+      lowerMsg.includes("hacked") ||
+      lowerMsg.includes("breach") ||
+      lowerMsg.includes("danger") ||
+      lowerMsg.includes("alert") ||
+      lowerMsg.includes("critical");
+
+    const criticalComponentProps = { mode: "critical", message: "⚠️ SECURITY BREACH" };
     
     console.log(`🔥 Nova Processing: "${message}"`);
 
@@ -80,9 +90,9 @@ export async function POST(req: Request) {
         console.log("⚡ ENGAGING LOCAL BACKUP");
         
         // EKHANE TOR RED LOGIC ACHE
-        if (lowerMsg.includes("hack") || lowerMsg.includes("danger") || lowerMsg.includes("alert") || lowerMsg.includes("critical")) {
+        if (securityBreachTriggered) {
             component = "AgentGrid";
-            componentProps = { mode: "critical", message: "⚠️ SECURITY BREACH DETECTED" };
+            componentProps = criticalComponentProps;
             replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
         } 
         else if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
@@ -93,6 +103,12 @@ export async function POST(req: Request) {
         else {
             replyText = "Nova System Online. Awaiting commands.";
         }
+    }
+
+    if (securityBreachTriggered) {
+        component = "AgentGrid";
+        componentProps = criticalComponentProps;
+        replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
     }
 
     return NextResponse.json({ 

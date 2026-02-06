@@ -75,9 +75,13 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
         // GENERATIVE UI LOGIC:
         // If the backend signals a component, render it inside the terminal
         if (data.component === "AgentGrid") {
+          const rawMode = data?.componentProps?.mode;
+          const mode = rawMode === "safe" || rawMode === "caution" || rawMode === "critical" ? rawMode : undefined;
+          const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
+
           setLogs((prev) => [...prev, { 
             type: "component", 
-            content: <AgentGrid /> 
+            content: <AgentGrid mode={mode} message={message} /> 
           }]); 
         }
       
