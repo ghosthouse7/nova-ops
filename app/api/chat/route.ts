@@ -98,7 +98,6 @@ export async function POST(req: Request) {
             componentProps = {
               fileType: "bash",
               codeLines: "> TARGET: PROXY_CHAIN_7\n> IP: 203.0.113.45 [FOUND]",
-              message: "TARGET: PROXY_CHAIN_7 | IP: 203.0.113.45 [FOUND]",
               mode: "caution",
             };
         }
