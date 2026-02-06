@@ -13,6 +13,9 @@ interface TerminalProps {
 type LogEntry = string | { type: "component"; content: React.ReactNode };
 
 export default function TerminalModal({ type, onClose }: TerminalProps) {
+  const isAgentGridMode = (value: unknown): value is "safe" | "caution" | "critical" =>
+    value === "safe" || value === "caution" || value === "critical";
+
   // State updated to hold text OR components
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [input, setInput] = useState("");
@@ -76,7 +79,7 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
         // If the backend signals a component, render it inside the terminal
         if (data.component === "AgentGrid") {
           const rawMode = data?.componentProps?.mode;
-          const mode = rawMode === "safe" || rawMode === "caution" || rawMode === "critical" ? rawMode : undefined;
+          const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
           const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
 
           setLogs((prev) => [...prev, { 
