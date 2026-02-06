@@ -14,8 +14,7 @@ interface TerminalProps {
 type LogEntry =
   | string
   | {
-      type: "component";
-      component: "AgentGrid";
+      type: "AgentGrid";
       componentProps: { mode?: "safe" | "caution" | "critical"; message?: string };
     };
 
@@ -46,8 +45,8 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
     ]);
   }, [type]);
 
-  const isAgentGridLogEntry = (entry: LogEntry): entry is Extract<LogEntry, { component: "AgentGrid" }> =>
-    typeof entry !== "string" && entry.component === "AgentGrid";
+  const isAgentGridLogEntry = (entry: LogEntry): entry is Extract<LogEntry, { type: "AgentGrid" }> =>
+    typeof entry !== "string" && entry.type === "AgentGrid";
 
   const submitCommand = async (rawInput?: string) => {
     if (loading || submittingRef.current) return;
@@ -56,71 +55,68 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
     if (!command) return;
 
     submittingRef.current = true;
-    onSend();
-
-    // Add user command to logs
-    setLogs((prev) => [...prev, `user@nova:~$ ${command}`]);
-    setInput("");
-
-    // Handle Local Commands
-    if (command.toLowerCase() === "clear") {
-      setLogs([]);
-      submittingRef.current = false;
-      return;
-    }
-    if (command.toLowerCase() === "exit") {
-      submittingRef.current = false;
-      onClose();
-      return;
-    }
-
-    setLoading(true);
-
-    // API Call to Backend (Tambo)
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: command }),
-      });
-      
-      const data = await res.json();
-      
-      // Add AI Text Response
-      if (data.reply) {
-         setLogs((prev) => [...prev, `> NOVA: ${data.reply}`]);
+      onSend();
+
+      // Add user command to logs
+      setLogs((prev) => [...prev, `user@nova:~$ ${command}`]);
+      setInput("");
+
+      // Handle Local Commands
+      if (command.toLowerCase() === "clear") {
+        setLogs([]);
+        return;
+      }
+      if (command.toLowerCase() === "exit") {
+        onClose();
+        return;
       }
 
-      // GENERATIVE UI LOGIC:
-      // If the backend signals a component, render it inside the terminal
-      if (data.component === "AgentGrid") {
-        const rawMode = data?.componentProps?.mode;
-        const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
-        const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
-
-        setLogs((prev) => {
-          const next = [...prev];
-          const index = next.findIndex(isAgentGridLogEntry);
-          const updated: LogEntry = {
-            type: "component",
-            component: "AgentGrid",
-            componentProps: { mode, message },
-          };
-
-          if (index === -1) {
-            next.push(updated);
-            return next;
-          }
-
-          next[index] = updated;
-          return next;
+      setLoading(true);
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: command }),
         });
+        
+        const data = await res.json();
+        
+        // Add AI Text Response
+        if (data.reply) {
+           setLogs((prev) => [...prev, `> NOVA: ${data.reply}`]);
+        }
+
+        // GENERATIVE UI LOGIC:
+        // If the backend signals a component, render it inside the terminal
+        if (data.component === "AgentGrid") {
+          const rawMode = data?.componentProps?.mode;
+          const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
+          const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
+
+          setLogs((prev) => {
+            const next = [...prev];
+            const index = next.findIndex(isAgentGridLogEntry);
+            const updated: LogEntry = {
+              type: "AgentGrid",
+              componentProps: { mode, message },
+            };
+
+            if (index === -1) {
+              next.push(updated);
+              return next;
+            }
+
+            next[index] = updated;
+            return next;
+          });
+        }
+      } catch {
+        setLogs((prev) => [...prev, `> ERROR: Uplink failed. Check network connection.`]);
+      } finally {
+        setLoading(false);
       }
-    
-    } catch {
-      setLogs((prev) => [...prev, `> ERROR: Uplink failed. Check network connection.`]);
     } finally {
-      setLoading(false);
       submittingRef.current = false;
     }
   };
@@ -129,9 +125,9 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
   const handleCommand = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== "Enter" || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
     if (loading || submittingRef.current) return;
-    if (!e.currentTarget.value.trim()) return;
+    if (!input.trim()) return;
 
-    void submitCommand(e.currentTarget.value);
+    void submitCommand(input);
   };
 
   return (
@@ -196,7 +192,7 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
           />
           <button
             type="button"
-            onClick={() => void submitCommand()}
+            onClick={() => void submitCommand(input)}
             disabled={loading || !input.trim()}
             className="rounded border border-cyan-500/40 px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-cyan-300 transition-colors hover:bg-cyan-500/10 disabled:opacity-40"
           >
