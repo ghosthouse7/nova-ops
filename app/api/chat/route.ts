@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const message = body.message || "";
     const lowerMsg = message.toLowerCase();
 
-    const securityBreachTriggered = /\b(hack(ed|ing)?|breach|danger(ous)?|alert(s)?|critical)\b/.test(lowerMsg);
+    const securityBreachTriggered = /\b(hack(ed|ing)?|breach|danger(ous)?|alert(s)?)\b/.test(lowerMsg);
 
     const criticalComponentProps = { mode: "critical" as const, message: "⚠️ SECURITY BREACH" };
     
@@ -83,6 +83,8 @@ export async function POST(req: Request) {
     // SCENARIO B: API Failed (Local Backup)
     else {
         console.log("⚡ ENGAGING LOCAL BACKUP");
+
+        // Note: security breach keywords are handled below as a final override.
 
         if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
             component = "AgentGrid";

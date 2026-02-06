@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useEffect } from "react";
 
+const CRITICAL_SHAKE_X = [0, -6, 6, -6, 6, 0];
+
 interface AgentGridProps {
   mode?: "safe" | "caution" | "critical";
   message?: string;
@@ -57,7 +59,7 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
             opacity: 1, 
             scale: 1,
             // SHAKE EFFECT IF CRITICAL
-            x: isCritical ? [0, -6, 6, -6, 6, 0] : 0,
+            x: isCritical ? CRITICAL_SHAKE_X : 0,
           }}
           transition={{ duration: 0.4 }}
           className={`relative border-2 ${theme.border} ${containerBgClass} rounded-lg p-4 md:p-6 overflow-hidden ${theme.shadow} shadow-2xl`}
