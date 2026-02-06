@@ -12,6 +12,9 @@ interface TerminalProps {
 // Define type for log entries: can be simple text or a complex component
 type LogEntry = string | { type: "component"; content: React.ReactNode };
 
+const isAgentGridMode = (value: unknown): value is "safe" | "caution" | "critical" =>
+  value === "safe" || value === "caution" || value === "critical";
+
 export default function TerminalModal({ type, onClose }: TerminalProps) {
   // State updated to hold text OR components
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -75,13 +78,17 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
         // GENERATIVE UI LOGIC:
         // If the backend signals a component, render it inside the terminal
         if (data.component === "AgentGrid") {
+          const rawMode = data?.componentProps?.mode;
+          const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
+          const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
+
           setLogs((prev) => [...prev, { 
             type: "component", 
-            content: <AgentGrid /> 
+            content: <AgentGrid mode={mode} message={message} /> 
           }]); 
         }
       
-      } catch (error) {
+      } catch {
         setLogs((prev) => [...prev, `> ERROR: Uplink failed. Check network connection.`]);
       } finally {
         setLoading(false);

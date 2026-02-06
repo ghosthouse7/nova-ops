@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import React, { useState, useEffect } from "react";
 
+const CRITICAL_SHAKE_X = [0, -6, 6, -6, 6, 0];
+
 interface AgentGridProps {
   mode?: "safe" | "caution" | "critical";
   message?: string;
@@ -20,6 +22,9 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
     critical: { color: "red", hex: "#ef4444", bg: "bg-red-600", border: "border-red-600", shadow: "shadow-red-600/80" },
   };
   const theme = themes[mode];
+  const isCritical = mode === "critical";
+  const accentTextClass = isCritical ? "text-red-400" : mode === "caution" ? "text-yellow-400" : "text-cyan-400";
+  const containerBgClass = isCritical ? "bg-red-950/60" : "bg-black/80";
 
   // 3. LIVE SIMULATION EFFECT (Heartbeat)
   useEffect(() => {
@@ -54,10 +59,10 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
             opacity: 1, 
             scale: 1,
             // SHAKE EFFECT IF CRITICAL
-            x: mode === "critical" ? [0, -5, 5, -5, 5, 0] : 0,
+            x: isCritical ? CRITICAL_SHAKE_X : 0,
           }}
           transition={{ duration: 0.4 }}
-          className={`relative border-2 ${theme.border} bg-black/80 rounded-lg p-4 md:p-6 overflow-hidden ${theme.shadow} shadow-2xl`}
+          className={`relative border-2 ${theme.border} ${containerBgClass} rounded-lg p-4 md:p-6 overflow-hidden ${theme.shadow} shadow-2xl`}
         >
           
           {/* BACKGROUND GRID ANIMATION */}
@@ -73,11 +78,11 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
                 transition={{ duration: mode === "critical" ? 0.2 : 1.5, repeat: Infinity }}
                 className={`w-3 h-3 rounded-full ${theme.bg}`} 
               />
-              <h2 className={`text-lg font-bold tracking-[0.2em] ${`text-${theme.color}-400`}`}>
+              <h2 className={`text-lg font-bold tracking-[0.2em] ${accentTextClass}`}>
                 NOVA SYSTEM
               </h2>
             </div>
-            <div className={`px-2 py-1 rounded border ${theme.border} text-${theme.color}-400 text-[10px] font-bold`}>
+            <div className={`px-2 py-1 rounded border ${theme.border} ${accentTextClass} text-[10px] font-bold`}>
               {mode.toUpperCase()}
             </div>
           </div>
@@ -87,7 +92,7 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
             {/* CPU GAUGE */}
             <div className={`col-span-1 p-3 border ${theme.border} bg-white/5 rounded flex flex-col items-center justify-center`}>
                <span className="text-white/50 mb-1">CPU LOAD</span>
-               <span className={`text-3xl font-bold text-${theme.color}-400`}>{metrics.cpu}%</span>
+               <span className={`text-3xl font-bold ${accentTextClass}`}>{metrics.cpu}%</span>
                <motion.div className="w-full h-1 bg-gray-700 mt-2 rounded overflow-hidden">
                  <motion.div animate={{ width: `${metrics.cpu}%` }} className={`h-full ${theme.bg}`} />
                </motion.div>
@@ -96,7 +101,7 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
             {/* MEMORY GAUGE */}
             <div className={`col-span-1 p-3 border ${theme.border} bg-white/5 rounded flex flex-col items-center justify-center`}>
                <span className="text-white/50 mb-1">MEMORY</span>
-               <span className={`text-3xl font-bold text-${theme.color}-400`}>{metrics.mem}%</span>
+               <span className={`text-3xl font-bold ${accentTextClass}`}>{metrics.mem}%</span>
                <motion.div className="w-full h-1 bg-gray-700 mt-2 rounded overflow-hidden">
                  <motion.div animate={{ width: `${metrics.mem}%` }} className={`h-full ${theme.bg}`} />
                </motion.div>
@@ -105,8 +110,8 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
             {/* SECURITY STATUS */}
             <div className={`col-span-1 p-3 border ${theme.border} bg-white/5 rounded flex flex-col items-center justify-center text-center`}>
                <span className="text-white/50 mb-1">NETWORK</span>
-               <span className={`text-lg font-bold ${mode === "critical" ? "text-red-500 animate-pulse" : "text-cyan-400"}`}>
-                 {mode === "critical" ? "UNSTABLE" : "SECURE"}
+               <span className={`text-lg font-bold ${isCritical ? "text-red-500 animate-pulse" : accentTextClass}`}>
+                 {isCritical ? "UNSTABLE" : "SECURE"}
                </span>
             </div>
           </div>
@@ -132,7 +137,7 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className={`mt-4 text-center font-bold tracking-widest uppercase text-${theme.color}-400`}
+            className={`mt-4 text-center font-bold tracking-widest uppercase ${accentTextClass}`}
           >
              &gt;&gt; {message} &lt;&lt;
           </motion.div>

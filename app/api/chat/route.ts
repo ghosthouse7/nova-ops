@@ -9,6 +9,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const message = body.message || "";
     const lowerMsg = message.toLowerCase();
+
+    const securityBreachTriggered = /\b(hack(ed|ing)?|breach|danger(ous)?|alert(s)?)\b/.test(lowerMsg);
+
+    const criticalComponentProps = { mode: "critical" as const, message: "⚠️ SECURITY BREACH" };
     
     console.log(`🔥 Nova Processing: "${message}"`);
 
@@ -57,13 +61,13 @@ export async function POST(req: Request) {
                 console.warn("⚠️ API Error Response:", await response.text());
             }
         }
-    } catch (e) {
+    } catch {
         console.warn("⚠️ API Failed, switching to backup.");
     }
 
     // 3. DECISION ENGINE (The Hybrid Logic)
     let component = null;
-    let componentProps = {};
+    let componentProps: Record<string, unknown> = {};
     let replyText = "System ready.";
 
     // SCENARIO A: API Worked
@@ -71,21 +75,18 @@ export async function POST(req: Request) {
         const tool = aiResult.choices[0].message.tool_calls[0];
         if (tool.function.name === "AgentGrid") {
             component = "AgentGrid";
-            componentProps = JSON.parse(tool.function.arguments);
+            const parsed = JSON.parse(tool.function.arguments);
+            componentProps = typeof parsed === "object" && parsed !== null ? parsed : {};
             replyText = "Tambo AI: Visualizing Data.";
         }
     } 
     // SCENARIO B: API Failed (Local Backup)
     else {
         console.log("⚡ ENGAGING LOCAL BACKUP");
-        
-        // EKHANE TOR RED LOGIC ACHE
-        if (lowerMsg.includes("hack") || lowerMsg.includes("danger") || lowerMsg.includes("alert") || lowerMsg.includes("critical")) {
-            component = "AgentGrid";
-            componentProps = { mode: "critical", message: "⚠️ SECURITY BREACH DETECTED" };
-            replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
-        } 
-        else if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
+
+        // Note: security breach keywords are handled below as a final override.
+
+        if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
             component = "AgentGrid";
             componentProps = { mode: "safe", message: "ALL SYSTEMS NOMINAL" };
             replyText = "System Status: Online. Monitoring active.";
@@ -95,13 +96,19 @@ export async function POST(req: Request) {
         }
     }
 
+    if (securityBreachTriggered) {
+        component = "AgentGrid";
+        componentProps = { ...componentProps, ...criticalComponentProps };
+        replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
+    }
+
     return NextResponse.json({ 
       reply: replyText, 
       component: component,
       componentProps: componentProps 
     });
 
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ reply: "System Malfunction." }, { status: 500 });
   }
 }
