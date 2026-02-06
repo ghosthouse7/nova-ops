@@ -10,7 +10,7 @@ NOVA OPS is a **Generative UI Dashboard** designed for next-gen cyber-defense. U
 
 ---
 
-## 🚀 Why This Wins "Best Use Case"
+
 
 ### 🧠 1. True Generative UI (Powered by Tambo)
 The application doesn't have hardcoded pages. It has "Capabilities."
