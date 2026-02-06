@@ -110,8 +110,8 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
             {/* SECURITY STATUS */}
             <div className={`col-span-1 p-3 border ${theme.border} bg-white/5 rounded flex flex-col items-center justify-center text-center`}>
                <span className="text-white/50 mb-1">NETWORK</span>
-               <span className={`text-lg font-bold ${mode === "critical" ? "text-red-500 animate-pulse" : "text-cyan-400"}`}>
-                 {mode === "critical" ? "UNSTABLE" : "SECURE"}
+               <span className={`text-lg font-bold ${isCritical ? "text-red-500 animate-pulse" : accentTextClass}`}>
+                 {isCritical ? "UNSTABLE" : "SECURE"}
                </span>
             </div>
           </div>
