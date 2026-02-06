@@ -92,7 +92,21 @@ export async function POST(req: Request) {
 
         // Note: security breach keywords are handled below as a final override.
 
-        if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
+        if (lowerMsg.includes("trace") || lowerMsg.includes("scan") || lowerMsg.includes("analyze") || lowerMsg.includes("logs")) {
+            replyText = "Initiating Deep Trace Protocol... Analyzing packets.";
+            component = "AgentGrid";
+            componentProps = {
+              fileType: "bash",
+              codeLines: "> TARGET: PROXY_CHAIN_7\n> IP: 203.0.113.45 [FOUND]",
+              mode: "caution",
+            };
+        }
+        else if (lowerMsg.includes("isolate") || lowerMsg.includes("lockdown") || lowerMsg.includes("secure") || lowerMsg.includes("fix")) {
+            replyText = "System Isolated. Threat contained. Defense Matrix Active.";
+            component = "AgentGrid";
+            componentProps = { mode: "safe", message: "THREAT CONTAINED", actions: ["View Report", "Unlock"] };
+        }
+        else if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
             component = "AgentGrid";
             componentProps = { mode: "safe", message: "ALL SYSTEMS NOMINAL" };
             replyText = "System Status: Online. Monitoring active.";
@@ -113,7 +127,11 @@ export async function POST(req: Request) {
         componentProps.mode === "safe" || componentProps.mode === "caution" || componentProps.mode === "critical"
           ? componentProps.mode
           : undefined;
-      componentProps = { ...componentProps, actions: actionsForMode(mode) };
+      const hasValidActions =
+        Array.isArray(componentProps.actions) && componentProps.actions.every((action) => typeof action === "string");
+      if (!hasValidActions) {
+        componentProps = { ...componentProps, actions: actionsForMode(mode) };
+      }
     }
 
     return NextResponse.json({ 
