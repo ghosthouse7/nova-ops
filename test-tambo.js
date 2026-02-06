@@ -5,6 +5,6 @@ import { TamboAI } from "@tambo-ai/typescript-sdk";
 const tambo = new TamboAI({ apiKey: "test" });
 
 console.log("--- TAMBO SDK SECRETS ---");
-// @ts-ignore
+// @ts-expect-error Accessing SDK internals for local debugging.
 console.log("1. Base URL:", tambo.baseURL || tambo._client?.baseURL || "Hidden inside client");
 console.log("-------------------------");
