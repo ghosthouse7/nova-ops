@@ -56,13 +56,11 @@ In NOVA OPS, Tambo isn't just generating text; it is:
 ## 📸 Snapshots
 
 ### 1. The Hero Interface
-*(Add your screenshot here)*
+<img width="1916" height="901" alt="Image" src="https://github.com/user-attachments/assets/6ec81008-c01d-4ab9-bf0c-ef88ed147824" />
 
 ### 2. Critical Alert Mode (Generative Red Grid)
-*(Add your screenshot here)*
+<img width="1862" height="862" alt="Image" src="https://github.com/user-attachments/assets/9e3629a8-6a98-4b3b-92d5-041ee8f5515d" />
 
-### 3. Deep Analysis Mode (Hacking Terminal)
-*(Add your screenshot here)*
 
 ---
 
