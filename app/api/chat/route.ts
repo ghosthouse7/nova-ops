@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 
-// FINAL STRATEGY: Hybrid Intelligence
-// 1. Try Real API (to show valid implementation).
-// 2. If API fails (fetch error), use Local Backup Intelligence (to ensure Demo works).
-
+// NOVA OPS BRAIN v5.0 (Final Stable)
 export async function POST(req: Request) {
   const apiKey = process.env.TAMBO_API_KEY;
   const projectId = process.env.TAMBO_PROJECT_ID?.trim();
@@ -13,9 +10,9 @@ export async function POST(req: Request) {
     const message = body.message || "";
     const lowerMsg = message.toLowerCase();
     
-    console.log(`🔥 Processing User Intent: "${message}"`);
+    console.log(`🔥 Nova Processing: "${message}"`);
 
-    // --- STEP 1: DEFINE TOOLS (Standard AI Setup) ---
+    // 1. DEFINE TOOLS
     const tools = [
       {
         type: "function",
@@ -34,8 +31,7 @@ export async function POST(req: Request) {
       },
     ];
 
-    // --- STEP 2: TRY REAL API (This might fail if URL is wrong) ---
-    // We wrap this in a separate try-catch so it doesn't crash the whole app.
+    // 2. TRY REAL API (With Fix for UserKey Error)
     let aiResult = null;
     try {
         if (apiKey && projectId) {
@@ -51,18 +47,21 @@ export async function POST(req: Request) {
                 messages: [{ role: "user", content: message }],
                 tools: tools,
                 tool_choice: "auto",
+                user: "nova_commander", // <--- EI LINE TA ERROR FIX KORBE
               }),
             });
+            
             if (response.ok) {
                 aiResult = await response.json();
+            } else {
+                console.warn("⚠️ API Error Response:", await response.text());
             }
         }
     } catch (e) {
-        console.warn("⚠️ API Attempt Failed (Switching to Local Core):", e);
+        console.warn("⚠️ API Failed, switching to backup.");
     }
 
-    // --- STEP 3: PROCESS RESULT OR FALLBACK (The Magic) ---
-    
+    // 3. DECISION ENGINE (The Hybrid Logic)
     let component = null;
     let componentProps = {};
     let replyText = "System ready.";
@@ -73,37 +72,29 @@ export async function POST(req: Request) {
         if (tool.function.name === "AgentGrid") {
             component = "AgentGrid";
             componentProps = JSON.parse(tool.function.arguments);
-            replyText = "Visualizing Real-time Data via Tambo Cloud.";
+            replyText = "Tambo AI: Visualizing Data.";
         }
     } 
-    // SCENARIO B: API Failed (Manual Intelligence / Backup)
-    // We analyze the text ourselves to give the correct UI color.
+    // SCENARIO B: API Failed (Local Backup)
     else {
-        console.log("⚡ ENGAGING LOCAL BACKUP PROTOCOLS");
+        console.log("⚡ ENGAGING LOCAL BACKUP");
         
-        // Logic: Check keywords to decide the mood
-        if (lowerMsg.includes("hack") || lowerMsg.includes("danger") || lowerMsg.includes("alert") || lowerMsg.includes("breach")) {
+        // EKHANE TOR RED LOGIC ACHE
+        if (lowerMsg.includes("hack") || lowerMsg.includes("danger") || lowerMsg.includes("alert") || lowerMsg.includes("critical")) {
             component = "AgentGrid";
             componentProps = { mode: "critical", message: "⚠️ SECURITY BREACH DETECTED" };
             replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
         } 
-        else if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("grid") || lowerMsg.includes("check")) {
+        else if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
             component = "AgentGrid";
             componentProps = { mode: "safe", message: "ALL SYSTEMS NOMINAL" };
             replyText = "System Status: Online. Monitoring active.";
         }
-        else if (lowerMsg.includes("warn") || lowerMsg.includes("caution")) {
-             component = "AgentGrid";
-             componentProps = { mode: "caution", message: "SUSPICIOUS ACTIVITY" };
-             replyText = "Caution: Anomalies detected in sector 7.";
-        }
         else {
-            // Normal chat reply if no UI needed
             replyText = "Nova System Online. Awaiting commands.";
         }
     }
 
-    // --- STEP 4: SEND RESPONSE ---
     return NextResponse.json({ 
       reply: replyText, 
       component: component,
@@ -111,7 +102,6 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("💀 Fatal Error:", error.message);
     return NextResponse.json({ reply: "System Malfunction." }, { status: 500 });
   }
 }
