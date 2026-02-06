@@ -128,6 +128,8 @@ export function playSuccess() {
 
 /**
 * Start a repeating critical alarm. Call the returned function to stop it (e.g., in effect cleanup).
+*
+* The returned function must be called to release timers and audio nodes.
 */
 export function playAlert(): () => void {
   const ctx = getAudioContext();
