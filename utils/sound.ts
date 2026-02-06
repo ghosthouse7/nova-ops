@@ -130,6 +130,9 @@ export function playSuccess() {
   });
 }
 
+/**
+* Start a repeating critical alarm. Call the returned function to stop it (e.g., in effect cleanup).
+*/
 export function playAlert(): () => void {
   const ctx = getAudioContext();
   if (!ctx) return () => {};

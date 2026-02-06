@@ -45,76 +45,82 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
     ]);
   }, [type]);
 
-  // Command Handler
-  const handleCommand = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !loading) {
-      if (!input.trim()) return;
+  const submitCommand = async () => {
+    if (loading) return;
 
-      onSend?.();
+    const command = input.trim();
+    if (!command) return;
 
-      const command = input.trim();
-      // Add user command to logs
-      setLogs((prev) => [...prev, `user@nova:~$ ${command}`]);
-      setInput("");
-      setLoading(true);
+    onSend();
 
-      // Handle Local Commands
-      if (command.toLowerCase() === "clear") {
-        setLogs([]);
-        setLoading(false);
-        return;
-      }
-      if (command.toLowerCase() === "exit") {
-        onClose();
-        return;
-      }
+    // Add user command to logs
+    setLogs((prev) => [...prev, `user@nova:~$ ${command}`]);
+    setInput("");
+    setLoading(true);
 
-      // API Call to Backend (Tambo)
-      try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: command }),
-        });
-        
-        const data = await res.json();
-        
-        // Add AI Text Response
-        if (data.reply) {
-           setLogs((prev) => [...prev, `> NOVA: ${data.reply}`]);
-        }
+    // Handle Local Commands
+    if (command.toLowerCase() === "clear") {
+      setLogs([]);
+      setLoading(false);
+      return;
+    }
+    if (command.toLowerCase() === "exit") {
+      onClose();
+      return;
+    }
 
-        // GENERATIVE UI LOGIC:
-        // If the backend signals a component, render it inside the terminal
-        if (data.component === "AgentGrid") {
-          const rawMode = data?.componentProps?.mode;
-          const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
-          const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
-
-          setLogs((prev) => {
-            const next = [...prev];
-            const index = next.findIndex((entry) => typeof entry !== "string" && entry.type === "component" && entry.component === "AgentGrid");
-            const updated: LogEntry = {
-              type: "component",
-              component: "AgentGrid",
-              componentProps: { mode, message },
-            };
-
-            if (index === -1) {
-              next.push(updated);
-              return next;
-            }
-
-            next[index] = updated;
-            return next;
-          });
-        }
+    // API Call to Backend (Tambo)
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: command }),
+      });
       
-      } catch {
-        setLogs((prev) => [...prev, `> ERROR: Uplink failed. Check network connection.`]);
-      } finally {
-        setLoading(false);
+      const data = await res.json();
+      
+      // Add AI Text Response
+      if (data.reply) {
+         setLogs((prev) => [...prev, `> NOVA: ${data.reply}`]);
       }
+
+      // GENERATIVE UI LOGIC:
+      // If the backend signals a component, render it inside the terminal
+      if (data.component === "AgentGrid") {
+        const rawMode = data?.componentProps?.mode;
+        const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
+        const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
+
+        setLogs((prev) => {
+          const next = [...prev];
+          const index = next.findIndex((entry) => typeof entry !== "string" && entry.type === "component" && entry.component === "AgentGrid");
+          const updated: LogEntry = {
+            type: "component",
+            component: "AgentGrid",
+            componentProps: { mode, message },
+          };
+
+          if (index === -1) {
+            next.push(updated);
+            return next;
+          }
+
+          next[index] = updated;
+          return next;
+        });
+      }
+    
+    } catch {
+      setLogs((prev) => [...prev, `> ERROR: Uplink failed. Check network connection.`]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Command Handler
+  const handleCommand = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      void submitCommand();
     }
   };
 
@@ -178,6 +184,14 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
             autoFocus
             autoComplete="off"
           />
+          <button
+            type="button"
+            onClick={() => void submitCommand()}
+            disabled={loading || !input.trim()}
+            className="rounded border border-cyan-500/40 px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-cyan-300 transition-colors hover:bg-cyan-500/10 disabled:opacity-40"
+          >
+            SEND
+          </button>
         </div>
 
       </div>
