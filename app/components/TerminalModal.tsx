@@ -28,6 +28,7 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const submittingRef = useRef(false);
 
   // Auto-scroll to bottom on new logs
   const scrollToBottom = () => {
@@ -45,29 +46,35 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
     ]);
   }, [type]);
 
-  const submitCommand = async () => {
-    if (loading) return;
+  const isAgentGridLogEntry = (entry: LogEntry): entry is Extract<LogEntry, { component: "AgentGrid" }> =>
+    typeof entry !== "string" && entry.component === "AgentGrid";
 
-    const command = input.trim();
+  const submitCommand = async (rawInput?: string) => {
+    if (loading || submittingRef.current) return;
+
+    const command = (typeof rawInput === "string" ? rawInput : input).trim();
     if (!command) return;
 
+    submittingRef.current = true;
     onSend();
 
     // Add user command to logs
     setLogs((prev) => [...prev, `user@nova:~$ ${command}`]);
     setInput("");
-    setLoading(true);
 
     // Handle Local Commands
     if (command.toLowerCase() === "clear") {
       setLogs([]);
-      setLoading(false);
+      submittingRef.current = false;
       return;
     }
     if (command.toLowerCase() === "exit") {
+      submittingRef.current = false;
       onClose();
       return;
     }
+
+    setLoading(true);
 
     // API Call to Backend (Tambo)
     try {
@@ -93,7 +100,7 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
 
         setLogs((prev) => {
           const next = [...prev];
-          const index = next.findIndex((entry) => typeof entry !== "string" && entry.type === "component" && entry.component === "AgentGrid");
+          const index = next.findIndex(isAgentGridLogEntry);
           const updated: LogEntry = {
             type: "component",
             component: "AgentGrid",
@@ -114,14 +121,17 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
       setLogs((prev) => [...prev, `> ERROR: Uplink failed. Check network connection.`]);
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
   // Command Handler
   const handleCommand = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      void submitCommand();
-    }
+    if (e.key !== "Enter" || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (loading || submittingRef.current) return;
+    if (!e.currentTarget.value.trim()) return;
+
+    void submitCommand(e.currentTarget.value);
   };
 
   return (

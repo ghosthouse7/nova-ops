@@ -44,27 +44,23 @@ export function playClick() {
     out.gain.setValueAtTime(1, now);
     out.connect(ctx.destination);
 
+    const clickGain = ctx.createGain();
+    clickGain.gain.setValueAtTime(0.0001, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.11, now + 0.008);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
+    clickGain.connect(out);
+
     const filter = ctx.createBiquadFilter();
     filter.type = "bandpass";
     filter.frequency.setValueAtTime(1400, now);
     filter.Q.setValueAtTime(10, now);
-    filter.connect(out);
+    filter.connect(clickGain);
 
     const osc = ctx.createOscillator();
     osc.type = "square";
     osc.frequency.setValueAtTime(1800, now);
     osc.frequency.exponentialRampToValueAtTime(650, now + 0.06);
     osc.connect(filter);
-
-    const clickGain = ctx.createGain();
-    clickGain.gain.setValueAtTime(0.0001, now);
-    clickGain.gain.exponentialRampToValueAtTime(0.11, now + 0.008);
-    clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
-
-    // Envelope on the output to avoid clicks/pops.
-    filter.disconnect();
-    filter.connect(clickGain);
-    clickGain.connect(out);
 
     osc.start(now);
     osc.stop(now + 0.09);
@@ -138,6 +134,7 @@ export function playAlert(): () => void {
   if (!ctx) return () => {};
 
   let stopped = false;
+  let initialized = false;
   let interval: ReturnType<typeof setInterval> | null = null;
   let out: GainNode | null = null;
   let lowPass: BiquadFilterNode | null = null;
@@ -150,6 +147,8 @@ export function playAlert(): () => void {
     stopped = true;
     if (interval) clearInterval(interval);
     interval = null;
+
+    if (!initialized) return;
 
     if (!gate || !osc || !sub) return;
     const now = ctx.currentTime;
@@ -172,6 +171,8 @@ export function playAlert(): () => void {
 
   void resumeIfNeeded(ctx).then(() => {
     if (stopped) return;
+
+    initialized = true;
 
     out = ctx.createGain();
     out.gain.setValueAtTime(0.85, ctx.currentTime);
