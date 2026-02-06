@@ -7,11 +7,17 @@ import AgentGrid from "./droids/AgentGrid";
 interface TerminalProps {
   type: string;
   onClose: () => void;
-  onSend?: () => void;
+  onSend: () => void;
 }
 
 // Define type for log entries: can be simple text or a complex component
-type LogEntry = string | { type: "component"; content: React.ReactNode };
+type LogEntry =
+  | string
+  | {
+      type: "component";
+      component: "AgentGrid";
+      componentProps: { mode?: "safe" | "caution" | "critical"; message?: string };
+    };
 
 const isAgentGridMode = (value: unknown): value is "safe" | "caution" | "critical" =>
   value === "safe" || value === "caution" || value === "critical";
@@ -85,10 +91,23 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
           const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
           const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
 
-          setLogs((prev) => [...prev, { 
-            type: "component", 
-            content: <AgentGrid mode={mode} message={message} /> 
-          }]); 
+          setLogs((prev) => {
+            const next = [...prev];
+            const index = next.findIndex((entry) => typeof entry !== "string" && entry.type === "component" && entry.component === "AgentGrid");
+            const updated: LogEntry = {
+              type: "component",
+              component: "AgentGrid",
+              componentProps: { mode, message },
+            };
+
+            if (index === -1) {
+              next.push(updated);
+              return next;
+            }
+
+            next[index] = updated;
+            return next;
+          });
         }
       
       } catch {
@@ -131,7 +150,7 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
                   <div className="absolute -top-3 left-4 bg-[#0a0a0a] px-2 text-[10px] text-green-500 uppercase tracking-widest border border-green-500/30 rounded">
                     :: GENERATIVE_UI_MODULE ::
                   </div>
-                  {log.content}
+                  <AgentGrid mode={log.componentProps.mode} message={log.componentProps.message} />
                 </div>
               )}
             </div>

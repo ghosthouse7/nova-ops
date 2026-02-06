@@ -32,18 +32,16 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
   useEffect(() => {
     const prevMode = prevModeRef.current;
 
-    if (mode === "critical") {
+    if (mode === "critical" && prevMode !== "critical") {
       stopAlertRef.current?.();
       stopAlertRef.current = playAlert();
-    } else {
-      if (prevMode === "critical") {
-        stopAlertRef.current?.();
-        stopAlertRef.current = null;
-      }
+    } else if (prevMode === "critical" && mode !== "critical") {
+      stopAlertRef.current?.();
+      stopAlertRef.current = null;
+    }
 
-      if (prevMode !== null && prevMode !== "safe" && mode === "safe") {
-        playSuccess();
-      }
+    if (prevMode !== null && prevMode !== "safe" && mode === "safe") {
+      playSuccess();
     }
 
     prevModeRef.current = mode;

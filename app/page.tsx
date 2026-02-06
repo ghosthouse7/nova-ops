@@ -13,6 +13,10 @@ import { playClick } from "@/utils/sound";
 export default function Home() {
   const [activeOrb, setActiveOrb] = useState<string | null>(null);
 
+  const handleSend = () => {
+    playClick();
+  };
+
   // Animation Variant for Title Letters
   const titleVariant = {
     hidden: { opacity: 0, y: 20 },
@@ -33,7 +37,7 @@ export default function Home() {
       
       {/* Terminal Popup (Z-Index 50) */}
       {activeOrb && (
-        <TerminalModal type={activeOrb} onClose={() => setActiveOrb(null)} onSend={playClick} />
+        <TerminalModal type={activeOrb} onClose={() => setActiveOrb(null)} onSend={handleSend} />
       )}
 
       {/* --- 2. SYSTEM MONITOR (Agent Grid) --- */}

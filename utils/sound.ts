@@ -1,7 +1,6 @@
 type AudioContextLike = AudioContext;
 
 let audioContext: AudioContextLike | null = null;
-let alertStopper: (() => void) | null = null;
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -83,9 +82,6 @@ export function playSuccess() {
   const ctx = getAudioContext();
   if (!ctx) return;
 
-  alertStopper?.();
-  alertStopper = null;
-
   void resumeIfNeeded(ctx).then(() => {
     const now = ctx.currentTime;
 
@@ -138,48 +134,68 @@ export function playAlert(): () => void {
   const ctx = getAudioContext();
   if (!ctx) return () => {};
 
-  alertStopper?.();
-
   let stopped = false;
   let interval: ReturnType<typeof setInterval> | null = null;
+  let out: GainNode | null = null;
+  let lowPass: BiquadFilterNode | null = null;
+  let gate: GainNode | null = null;
+  let osc: OscillatorNode | null = null;
+  let sub: OscillatorNode | null = null;
 
   const stop = () => {
     if (stopped) return;
     stopped = true;
     if (interval) clearInterval(interval);
     interval = null;
+
+    if (!gate || !osc || !sub) return;
+    const now = ctx.currentTime;
+
+    gate.gain.cancelScheduledValues(now);
+    gate.gain.setValueAtTime(gate.gain.value, now);
+    gate.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+
+    osc.stop(now + 0.07);
+    sub.stop(now + 0.07);
+
+    sub.onended = () => {
+      safeDisconnect(sub);
+      safeDisconnect(osc);
+      safeDisconnect(gate);
+      safeDisconnect(lowPass);
+      safeDisconnect(out);
+    };
   };
-  alertStopper = stop;
 
   void resumeIfNeeded(ctx).then(() => {
     if (stopped) return;
 
-    const out = ctx.createGain();
+    out = ctx.createGain();
     out.gain.setValueAtTime(0.85, ctx.currentTime);
     out.connect(ctx.destination);
 
-    const lowPass = ctx.createBiquadFilter();
+    lowPass = ctx.createBiquadFilter();
     lowPass.type = "lowpass";
     lowPass.frequency.setValueAtTime(1200, ctx.currentTime);
     lowPass.Q.setValueAtTime(0.7, ctx.currentTime);
     lowPass.connect(out);
 
-    const gate = ctx.createGain();
+    gate = ctx.createGain();
     gate.gain.setValueAtTime(0.0001, ctx.currentTime);
     gate.connect(lowPass);
 
-    const osc = ctx.createOscillator();
+    osc = ctx.createOscillator();
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(120, ctx.currentTime);
     osc.connect(gate);
 
-    const sub = ctx.createOscillator();
+    sub = ctx.createOscillator();
     sub.type = "sine";
     sub.frequency.setValueAtTime(60, ctx.currentTime);
     sub.connect(gate);
 
     const pulse = () => {
-      if (stopped) return;
+      if (!gate || !osc || stopped) return;
       const now = ctx.currentTime;
       const start = now + 0.01;
       const end = start + 0.16;
@@ -198,29 +214,7 @@ export function playAlert(): () => void {
     sub.start();
     pulse();
     interval = setInterval(pulse, 420);
-
-    const stopAndCleanup = () => {
-      stop();
-
-      const now = ctx.currentTime;
-      gate.gain.cancelScheduledValues(now);
-      gate.gain.setValueAtTime(gate.gain.value, now);
-      gate.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-
-      osc.stop(now + 0.07);
-      sub.stop(now + 0.07);
-
-      sub.onended = () => {
-        safeDisconnect(sub);
-        safeDisconnect(osc);
-        safeDisconnect(gate);
-        safeDisconnect(lowPass);
-        safeDisconnect(out);
-      };
-    };
-
-    alertStopper = stopAndCleanup;
   });
 
-  return () => alertStopper?.();
+  return stop;
 }
