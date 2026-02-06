@@ -85,7 +85,7 @@ export default function TerminalModal({ type, onClose }: TerminalProps) {
           }]); 
         }
       
-      } catch (error) {
+      } catch {
         setLogs((prev) => [...prev, `> ERROR: Uplink failed. Check network connection.`]);
       } finally {
         setLoading(false);

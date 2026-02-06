@@ -67,7 +67,7 @@ export async function POST(req: Request) {
                 console.warn("⚠️ API Error Response:", await response.text());
             }
         }
-    } catch (e) {
+    } catch {
         console.warn("⚠️ API Failed, switching to backup.");
     }
 
@@ -117,7 +117,7 @@ export async function POST(req: Request) {
       componentProps: componentProps 
     });
 
-  } catch (error: any) {
+  } catch {
     return NextResponse.json({ reply: "System Malfunction." }, { status: 500 });
   }
 }
