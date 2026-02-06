@@ -12,6 +12,11 @@ export async function POST(req: Request) {
 
     const securityBreachTriggered = /\b(hack(ed|ing)?|breach|danger(ous)?|alert(s)?)\b/.test(lowerMsg);
 
+    const safeActions = ["Run Deep Scan", "View System Logs", "Optimize Core"];
+    const criticalActions = ["Isolate Network", "Trace IP Source", "Engage Counter-Measures"];
+    const actionsForMode = (mode: "safe" | "caution" | "critical" | undefined) =>
+      mode === "critical" ? criticalActions : safeActions;
+
     const criticalComponentProps = { mode: "critical" as const, message: "⚠️ SECURITY BREACH" };
     
     console.log(`🔥 Nova Processing: "${message}"`);
@@ -28,6 +33,7 @@ export async function POST(req: Request) {
             properties: {
               mode: { type: "string", enum: ["safe", "caution", "critical"] },
               message: { type: "string" },
+              actions: { type: "array", items: { type: "string" } },
             },
             required: ["mode", "message"],
           },
@@ -100,6 +106,14 @@ export async function POST(req: Request) {
         component = "AgentGrid";
         componentProps = { ...componentProps, ...criticalComponentProps };
         replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
+    }
+
+    if (component === "AgentGrid") {
+      const mode =
+        componentProps.mode === "safe" || componentProps.mode === "caution" || componentProps.mode === "critical"
+          ? componentProps.mode
+          : undefined;
+      componentProps = { ...componentProps, actions: actionsForMode(mode) };
     }
 
     return NextResponse.json({ 

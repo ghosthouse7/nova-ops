@@ -15,11 +15,14 @@ type LogEntry =
   | string
   | {
       type: "AgentGrid";
-      componentProps: { mode?: "safe" | "caution" | "critical"; message?: string };
+      componentProps: { mode?: "safe" | "caution" | "critical"; message?: string; actions?: string[] };
     };
 
 const isAgentGridMode = (value: unknown): value is "safe" | "caution" | "critical" =>
   value === "safe" || value === "caution" || value === "critical";
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
 
 export default function TerminalModal({ type, onClose, onSend }: TerminalProps) {
   // State updated to hold text OR components
@@ -27,6 +30,8 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const focusAfterLoadRef = useRef(false);
   const submittingRef = useRef(false);
 
   // Auto-scroll to bottom on new logs
@@ -34,6 +39,12 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
   useEffect(scrollToBottom, [logs]);
+
+  useEffect(() => {
+    if (loading || !focusAfterLoadRef.current) return;
+    focusAfterLoadRef.current = false;
+    inputRef.current?.focus();
+  }, [loading]);
 
   // Initial Boot Sequence
   useEffect(() => {
@@ -93,6 +104,7 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
           const rawMode = data?.componentProps?.mode;
           const mode = isAgentGridMode(rawMode) ? rawMode : undefined;
           const message = typeof data?.componentProps?.message === "string" ? data.componentProps.message : undefined;
+          const actions = isStringArray(data?.componentProps?.actions) ? data.componentProps.actions : undefined;
 
           setLogs((prev) => {
             const next = [...prev];
@@ -105,7 +117,7 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
             }
             const updated: LogEntry = {
               type: "AgentGrid",
-              componentProps: { mode, message },
+              componentProps: { mode, message, actions },
             };
 
             if (index === -1) {
@@ -168,7 +180,19 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
                   <div className="absolute -top-3 left-4 bg-[#0a0a0a] px-2 text-[10px] text-green-500 uppercase tracking-widest border border-green-500/30 rounded">
                     :: GENERATIVE_UI_MODULE ::
                   </div>
-                  <AgentGrid mode={log.componentProps.mode} message={log.componentProps.message} />
+                  <AgentGrid
+                    mode={log.componentProps.mode}
+                    message={log.componentProps.message}
+                    actions={log.componentProps.actions}
+                    onActionSelect={(action) => {
+                      setInput(action);
+                      if (loading) {
+                        focusAfterLoadRef.current = true;
+                        return;
+                      }
+                      inputRef.current?.focus();
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -195,6 +219,7 @@ export default function TerminalModal({ type, onClose, onSend }: TerminalProps) 
             className="bg-transparent border-none outline-none text-white w-full font-mono focus:ring-0 placeholder-gray-600"
             autoFocus
             autoComplete="off"
+            ref={inputRef}
           />
           <button
             type="button"
