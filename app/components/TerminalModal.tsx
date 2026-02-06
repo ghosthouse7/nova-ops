@@ -12,10 +12,10 @@ interface TerminalProps {
 // Define type for log entries: can be simple text or a complex component
 type LogEntry = string | { type: "component"; content: React.ReactNode };
 
-export default function TerminalModal({ type, onClose }: TerminalProps) {
-  const isAgentGridMode = (value: unknown): value is "safe" | "caution" | "critical" =>
-    value === "safe" || value === "caution" || value === "critical";
+const isAgentGridMode = (value: unknown): value is "safe" | "caution" | "critical" =>
+  value === "safe" || value === "caution" || value === "critical";
 
+export default function TerminalModal({ type, onClose }: TerminalProps) {
   // State updated to hold text OR components
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [input, setInput] = useState("");

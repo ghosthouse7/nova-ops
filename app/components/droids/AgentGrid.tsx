@@ -59,7 +59,7 @@ export default function AgentGrid({ mode = "safe", message = "SYSTEM NORMAL" }: 
             // SHAKE EFFECT IF CRITICAL
             x: isCritical ? [0, -6, 6, -6, 6, 0] : 0,
           }}
-          transition={isCritical ? { duration: 0.35, repeat: Infinity, repeatDelay: 0.6 } : { duration: 0.4 }}
+          transition={{ duration: 0.4 }}
           className={`relative border-2 ${theme.border} ${containerBgClass} rounded-lg p-4 md:p-6 overflow-hidden ${theme.shadow} shadow-2xl`}
         >
           

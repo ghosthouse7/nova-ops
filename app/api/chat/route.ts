@@ -10,15 +10,9 @@ export async function POST(req: Request) {
     const message = body.message || "";
     const lowerMsg = message.toLowerCase();
 
-    const securityBreachTriggered =
-      lowerMsg.includes("hack") ||
-      lowerMsg.includes("hacked") ||
-      lowerMsg.includes("breach") ||
-      lowerMsg.includes("danger") ||
-      lowerMsg.includes("alert") ||
-      lowerMsg.includes("critical");
+    const securityBreachTriggered = /\b(hack(ed|ing)?|breach|danger(ous)?|alert(s)?|critical)\b/.test(lowerMsg);
 
-    const criticalComponentProps = { mode: "critical", message: "⚠️ SECURITY BREACH" };
+    const criticalComponentProps = { mode: "critical" as const, message: "⚠️ SECURITY BREACH" };
     
     console.log(`🔥 Nova Processing: "${message}"`);
 
@@ -73,7 +67,7 @@ export async function POST(req: Request) {
 
     // 3. DECISION ENGINE (The Hybrid Logic)
     let component = null;
-    let componentProps = {};
+    let componentProps: Record<string, unknown> = {};
     let replyText = "System ready.";
 
     // SCENARIO A: API Worked
@@ -81,21 +75,16 @@ export async function POST(req: Request) {
         const tool = aiResult.choices[0].message.tool_calls[0];
         if (tool.function.name === "AgentGrid") {
             component = "AgentGrid";
-            componentProps = JSON.parse(tool.function.arguments);
+            const parsed = JSON.parse(tool.function.arguments);
+            componentProps = typeof parsed === "object" && parsed !== null ? parsed : {};
             replyText = "Tambo AI: Visualizing Data.";
         }
     } 
     // SCENARIO B: API Failed (Local Backup)
     else {
         console.log("⚡ ENGAGING LOCAL BACKUP");
-        
-        // Local backup logic (when the API fails or doesn't return a tool call)
-        if (securityBreachTriggered) {
-            component = "AgentGrid";
-            componentProps = criticalComponentProps;
-            replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
-        } 
-        else if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
+
+        if (lowerMsg.includes("status") || lowerMsg.includes("monitor") || lowerMsg.includes("safe")) {
             component = "AgentGrid";
             componentProps = { mode: "safe", message: "ALL SYSTEMS NOMINAL" };
             replyText = "System Status: Online. Monitoring active.";
@@ -105,10 +94,9 @@ export async function POST(req: Request) {
         }
     }
 
-    // Force critical mode even if the API returns a tool call with non-critical props.
-    if (securityBreachTriggered && aiResult?.choices?.[0]?.message?.tool_calls) {
+    if (securityBreachTriggered) {
         component = "AgentGrid";
-        componentProps = criticalComponentProps;
+        componentProps = { ...componentProps, ...criticalComponentProps };
         replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
     }
 
