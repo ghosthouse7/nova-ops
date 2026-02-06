@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     else {
         console.log("⚡ ENGAGING LOCAL BACKUP");
         
-        // EKHANE TOR RED LOGIC ACHE
+        // Local backup logic (when the API fails or doesn't return a tool call)
         if (securityBreachTriggered) {
             component = "AgentGrid";
             componentProps = criticalComponentProps;
@@ -105,7 +105,8 @@ export async function POST(req: Request) {
         }
     }
 
-    if (securityBreachTriggered) {
+    // Force critical mode even if the API returns a tool call with non-critical props.
+    if (securityBreachTriggered && aiResult?.choices?.[0]?.message?.tool_calls) {
         component = "AgentGrid";
         componentProps = criticalComponentProps;
         replyText = "ALERT: Unauthorized Access! Engaging Defense Grid.";
