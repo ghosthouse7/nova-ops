@@ -8,7 +8,7 @@
 
 NOVA OPS is a **Generative UI Dashboard** designed for next-gen cyber-defense. Unlike traditional dashboards with static pages, NOVA uses **Tambo AI** to understand user intent (via voice or clicks) and *dynamically renders* the most appropriate interface component in real-time.
 
----
+--
 
 
 
